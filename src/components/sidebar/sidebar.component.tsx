@@ -4,6 +4,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Link } from "react-router-dom";
 
 const SidebarComponent = () => {
   return (
@@ -12,8 +13,13 @@ const SidebarComponent = () => {
         <AccordionItem value="item-1">
           <AccordionTrigger>Product</AccordionTrigger>
           <AccordionContent>
-            <ul>
-              <li>All</li>
+            <ul className="flex flex-col gap-4">
+              <Link to={"/"}>
+                <li>All</li>
+              </Link>
+              <Link to={"/add-product"}>
+                <li>add new</li>
+              </Link>
             </ul>
           </AccordionContent>
         </AccordionItem>
