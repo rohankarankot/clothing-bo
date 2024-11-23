@@ -1,16 +1,15 @@
-import ContainerMain from "./components/container/container.main";
-import HeaderComponent from "./components/header/header.component";
+import { BrowserRouter } from "react-router-dom";
 import SidebarComponent from "./components/sidebar/sidebar.component";
+import ContainerMain from "./components/container/container.main";
 
 const Layout = () => {
   return (
-    <div>
-      <HeaderComponent />
-      <div className="flex gap-2">
+    <BrowserRouter>
+      <div className="flex">
         <SidebarComponent />
         <ContainerMain />
       </div>
-    </div>
+    </BrowserRouter>
   );
 };
 
