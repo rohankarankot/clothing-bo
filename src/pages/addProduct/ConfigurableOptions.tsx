@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import { UseFormRegister } from "react-hook-form";
 import { Button } from "@/components/ui/button";
+import { MdClose } from "react-icons/md";
 
 type ConfigurableOptionsProps = {
   register: UseFormRegister<any>;
@@ -15,27 +16,62 @@ const ConfigurableOptions: React.FC<ConfigurableOptionsProps> = ({
   append,
   remove,
 }) => {
+  const [imagePreviews, setImagePreviews] = useState<Record<number, string[]>>(
+    {}
+  );
+  console.log("imagePreviews: ", imagePreviews);
+
+  const handleImageChange = (index: number, files: FileList | null) => {
+    if (!files) return;
+
+    const fileArray = Array.from(files);
+    const newPreviews = fileArray.map((file) => {
+      const reader = new FileReader();
+      return new Promise<string>((resolve) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      });
+    });
+    console.log("newPreviews: ", newPreviews);
+    Promise.all(newPreviews).then((previewUrls) => {
+      setImagePreviews((prev) => ({
+        ...prev,
+        [index]: previewUrls,
+      }));
+    });
+  };
+
   return (
     <div className="mb-4">
       <label className="block">Product Attributes</label>
       {fields.map((field, index) => (
         <div
           key={field.id}
-          className="flex flex-wrap space-y-4 mb-2 border border-cyan-300 p-4"
+          className="space-y-4 mb-2 border border-cyan-300 p-4"
         >
           {/* Featured Checkbox */}
-          <div className="w-1/6 flex items-center">
-            <input
-              type="checkbox"
-              {...register(`productAttributes.${index}.featured`)}
-              className="form-checkbox text-blue-600"
-            />
-            <span className="ml-2">Featured</span>
+          <div className="w-full flex items-center justify-between">
+            <div>
+              <input
+                type="checkbox"
+                {...register(`productAttributes.${index}.featured`)}
+                className="form-checkbox text-blue-600"
+              />
+              <span className="ml-2">Featured</span>
+            </div>
+
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => remove(index)}
+            >
+              <MdClose />
+            </Button>
           </div>
 
-          <div className="flex flex-wrap space-x-4">
+          <div className="flex flex-wrap space-x-4 gap-2">
             {/* Color Name Input */}
-            <div className="w-[20%]">
+            <div className="w-[10%]">
               <input
                 type="text"
                 {...register(`productAttributes.${index}.colorName`)}
@@ -44,8 +80,8 @@ const ConfigurableOptions: React.FC<ConfigurableOptionsProps> = ({
               />
             </div>
 
-            {/* Custom Color Picker (with square or circle shape) */}
-            <div className="w-[20%]">
+            {/* Custom Color Picker */}
+            <div className="w-[10%]">
               <input
                 type="color"
                 {...register(`productAttributes.${index}.colorHex`)}
@@ -58,14 +94,25 @@ const ConfigurableOptions: React.FC<ConfigurableOptionsProps> = ({
               />
             </div>
 
-            {/* Size */}
+            {/* Size Dropdown */}
             <div className="w-[20%]">
-              <input
-                type="text"
+              <select
                 {...register(`productAttributes.${index}.size`)}
-                placeholder="e.g., S, M, L, XL"
-                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"
-              />
+                className="w-full p-2 border text-black  rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"
+              >
+                <option
+                  value="Select Size"
+                  className="text-black dark:text-gray-800"
+                >
+                  Select Size
+                </option>
+                <option value="S">S</option>
+                <option value="M">M</option>
+                <option value="L">L</option>
+                <option value="XL">XL</option>
+                <option value="2XL">2XL</option>
+                <option value="3XL">3XL</option>
+              </select>
             </div>
 
             {/* Quantity */}
@@ -89,13 +136,30 @@ const ConfigurableOptions: React.FC<ConfigurableOptionsProps> = ({
             </div>
           </div>
 
-          <Button
-            type="button"
-            onClick={() => remove(index)}
-            className="text-red-500 mt-2"
-          >
-            Remove
-          </Button>
+          {/* Image Picker */}
+          <div className="mt-4">
+            <label className="block mb-2">Upload Images</label>
+            <input
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={(e) => handleImageChange(index, e.target.files)}
+              className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"
+            />
+
+            {/* Image Previews */}
+            <div className="flex flex-wrap mt-2">
+              {imagePreviews[index]?.map((src, i) => (
+                <div key={i} className="mr-2 mb-2">
+                  <img
+                    src={src}
+                    alt={`Preview ${i}`}
+                    className="w-[100px] h-[100px] border border-gray-300 rounded-md object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       ))}
       <Button
@@ -104,10 +168,11 @@ const ConfigurableOptions: React.FC<ConfigurableOptionsProps> = ({
           append({
             featured: false,
             colorName: "",
-            colorHex: "#000000",
+            hex: "#000000",
             size: "",
             quantity: 0,
             discountedPrice: 0,
+            images: imagePreviews,
           })
         }
         className="mt-2"

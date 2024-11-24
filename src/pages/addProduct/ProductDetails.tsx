@@ -28,7 +28,7 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({
         <label className="block">Slug</label>
         <input
           type="text"
-          {...register("slug.current", { required: "Slug is required" })}
+          {...register("slug", { required: "Slug is required" })}
           className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"
         />
         {errors.slug && (
