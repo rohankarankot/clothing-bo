@@ -3,6 +3,9 @@
 @tailwind utilities;
 
 @layer base {
+  input {
+    @apply text-black;
+  }
   :root {
     --background: 0 0% 100%;
     --foreground: 0 0% 3.9%;
