@@ -8,7 +8,7 @@ import { Link } from "react-router-dom";
 
 const SidebarComponent = () => {
   return (
-    <div className="sidebar w-1/4 px-4">
+    <div className="sidebar w-1/4 px-4 sticky top-20 bottom-0 h-full overflow-y-auto">
       <Accordion type="single" collapsible>
         <AccordionItem value="item-1">
           <AccordionTrigger>Product</AccordionTrigger>
@@ -18,7 +18,7 @@ const SidebarComponent = () => {
                 <li>All</li>
               </Link>
               <Link to={"/add-product"}>
-                <li>add new</li>
+                <li>Add New</li>
               </Link>
             </ul>
           </AccordionContent>

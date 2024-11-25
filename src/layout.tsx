@@ -8,7 +8,7 @@ const Layout = () => {
     <>
       <HeaderComponent />
       <BrowserRouter>
-        <div className="flex">
+        <div className="flex p-6">
           <SidebarComponent />
           <ContainerMain />
         </div>

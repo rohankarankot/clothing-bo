@@ -1,183 +1,339 @@
-import React, { useState } from "react";
-import { UseFormRegister } from "react-hook-form";
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Button } from "@/components/ui/button";
+import { PlusIcon } from "lucide-react";
+import {
+  JSXElementConstructor,
+  ReactElement,
+  ReactNode,
+  ReactPortal,
+  Key,
+  useState,
+} from "react";
+import { useFieldArray, useFormContext } from "react-hook-form";
 import { MdClose } from "react-icons/md";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@/components/ui/accordion"; // assuming these components exist
 
-type ConfigurableOptionsProps = {
-  register: UseFormRegister<any>;
-  fields: any[];
-  append: any;
-  remove: any;
-};
+const ConfigurableOptions: React.FC = () => {
+  const { register, control, setValue, getValues } = useFormContext();
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "productAttributes", // The field name in the form
+  });
 
-const ConfigurableOptions: React.FC<ConfigurableOptionsProps> = ({
-  register,
-  fields,
-  append,
-  remove,
-}) => {
-  const [imagePreviews, setImagePreviews] = useState<Record<number, string[]>>(
-    {}
-  );
-  console.log("imagePreviews: ", imagePreviews);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null); // Store the active index for Accordion
 
-  const handleImageChange = (index: number, files: FileList | null) => {
+  // Function to get the last attribute values (to prepopulate the new attribute)
+  const getLastAttributeValues = () => {
+    const productAttributes = getValues("productAttributes");
+    if (productAttributes.length > 0) {
+      const lastAttribute = productAttributes[productAttributes.length - 1];
+
+      // Map over colors and exclude the `images` field
+      const colorsWithoutImages = lastAttribute.options.colors.map(
+        (color: { [x: string]: any; images: any }) => {
+          const { images, ...restOfColor } = color;
+          return { ...restOfColor }; // Return color data without the `images` field
+        }
+      );
+
+      return {
+        ...lastAttribute,
+        options: {
+          ...lastAttribute.options,
+          colors:
+            colorsWithoutImages.length > 0
+              ? colorsWithoutImages
+              : [
+                  {
+                    color: "",
+                    hex: "#000000",
+                    quantity: 0,
+                    discountedPrice: 0,
+                    images: [], // Default value
+                  },
+                ],
+        },
+      };
+    }
+
+    // Default values if no attributes exist
+    return {
+      size: "S", // Default size
+      options: {
+        colors: [
+          {
+            color: "",
+            hex: "#000000",
+            quantity: 0,
+            discountedPrice: 0,
+            images: [], // Default value
+          },
+        ],
+      },
+    };
+  };
+
+  const handleImageChange = (
+    index: number,
+    colorIndex: number,
+    files: FileList | null
+  ) => {
     if (!files) return;
 
     const fileArray = Array.from(files);
-    const newPreviews = fileArray.map((file) => {
-      const reader = new FileReader();
-      return new Promise<string>((resolve) => {
-        reader.onload = () => resolve(reader.result as string);
-        reader.readAsDataURL(file);
-      });
-    });
-    console.log("newPreviews: ", newPreviews);
-    Promise.all(newPreviews).then((previewUrls) => {
-      setImagePreviews((prev) => ({
-        ...prev,
-        [index]: previewUrls,
-      }));
-    });
+
+    // Get current images for the specific color, or initialize with an empty array if none
+    const currentImages =
+      getValues(
+        `productAttributes.${index}.options.colors.${colorIndex}.images`
+      ) || [];
+
+    // Update the images array for that specific color
+    const updatedImages = [...currentImages, ...fileArray];
+
+    // Set the new value for images for that color in the form
+    setValue(
+      `productAttributes.${index}.options.colors.${colorIndex}.images`,
+      updatedImages
+    );
+  };
+
+  const generateImagePreview = (files: File[]) => {
+    return files.map((file) => URL.createObjectURL(file));
   };
 
   return (
     <div className="mb-4">
-      <label className="block">Product Attributes</label>
-      {fields.map((field, index) => (
-        <div
-          key={field.id}
-          className="space-y-4 mb-2 border border-cyan-300 p-4"
-        >
-          {/* Featured Checkbox */}
-          <div className="w-full flex items-center justify-between">
-            <div>
-              <input
-                type="checkbox"
-                {...register(`productAttributes.${index}.featured`)}
-                className="form-checkbox text-blue-600"
-              />
-              <span className="ml-2">Featured</span>
-            </div>
+      <label className="block py-3">Product Attributes</label>
 
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={() => remove(index)}
-            >
-              <MdClose />
-            </Button>
-          </div>
+      <Accordion type="single" collapsible>
+        {fields.map((field, index) => {
+          const size = getValues(`productAttributes.${index}.size`);
+          const colors =
+            getValues(`productAttributes.${index}.options.colors`) || [];
+          const imagePreviews = colors.map(
+            (colorObject: { images: any }, colorIndex: any) =>
+              generateImagePreview(colorObject.images || [])
+          );
 
-          <div className="flex flex-wrap space-x-4 gap-2">
-            {/* Color Name Input */}
-            <div className="w-[10%]">
-              <input
-                type="text"
-                {...register(`productAttributes.${index}.colorName`)}
-                placeholder="color"
-                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"
-              />
-            </div>
-
-            {/* Custom Color Picker */}
-            <div className="w-[10%]">
-              <input
-                type="color"
-                {...register(`productAttributes.${index}.colorHex`)}
-                className="w-full h-10 border-2 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600 appearance-none"
-                style={{
-                  width: "100%",
-                  height: "40px",
-                  borderRadius: "8px", // Change to "50%" for a circle
-                }}
-              />
-            </div>
-
-            {/* Size Dropdown */}
-            <div className="w-[20%]">
-              <select
-                {...register(`productAttributes.${index}.size`)}
-                className="w-full p-2 border text-black  rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"
+          return (
+            <AccordionItem key={field.id} value={`attribute-${index}`}>
+              <AccordionTrigger
+                onClick={() =>
+                  setActiveIndex(index === activeIndex ? null : index)
+                }
               >
-                <option
-                  value="Select Size"
-                  className="text-black dark:text-gray-800"
-                >
-                  Select Size
-                </option>
-                <option value="S">S</option>
-                <option value="M">M</option>
-                <option value="L">L</option>
-                <option value="XL">XL</option>
-                <option value="2XL">2XL</option>
-                <option value="3XL">3XL</option>
-              </select>
-            </div>
+                product size: {size || "S"}{" "}
+                {/* Display product size as title */}
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 mb-4 border p-4 flex flex-wrap gap-4">
+                  <div className="w-full flex items-center justify-between">
+                    <div>
+                      <label className="font-medium">Selected Size: </label>
+                      <span className="ml-2 text-blue-600">{size}</span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={() => remove(index)}
+                    >
+                      <MdClose />
+                    </Button>
+                  </div>
 
-            {/* Quantity */}
-            <div className="w-[20%]">
-              <input
-                type="number"
-                {...register(`productAttributes.${index}.quantity`)}
-                placeholder="Quantity"
-                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"
-              />
-            </div>
+                  <label className="font-medium">Select Size</label>
+                  <select
+                    {...register(`productAttributes.${index}.size`)}
+                    className="w-[20%] rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  >
+                    <option value="S">S</option>
+                    <option value="M">M</option>
+                    <option value="L">L</option>
+                    <option value="XL">XL</option>
+                    <option value="2XL">2XL</option>
+                    <option value="3XL">3XL</option>
+                  </select>
 
-            {/* Discounted Price */}
-            <div className="w-[20%]">
-              <input
-                type="number"
-                {...register(`productAttributes.${index}.discountedPrice`)}
-                placeholder="Discounted Price"
-                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"
-              />
-            </div>
-          </div>
+                  <div className="w-full">
+                    <label className="font-medium">Colors</label>
+                    {colors.map(
+                      (
+                        colorObject: {
+                          hex: any;
+                          color:
+                            | string
+                            | number
+                            | boolean
+                            | ReactElement<
+                                any,
+                                string | JSXElementConstructor<any>
+                              >
+                            | Iterable<ReactNode>
+                            | ReactPortal
+                            | null
+                            | undefined;
+                        },
+                        colorIndex: number
+                      ) => (
+                        <div
+                          key={colorIndex}
+                          className="flex gap-2 mb-2 flex-wrap border p-4 rounded"
+                        >
+                          <div className="w-20 flex flex-col">
+                            <label className="font-medium">Color</label>
+                            <input
+                              type="color"
+                              {...register(
+                                `productAttributes.${index}.options.colors.${colorIndex}.hex`
+                              )}
+                              defaultValue={colorObject.hex || "#000000"}
+                              className="w-10 h-10 p-0 border border-gray-300 rounded-md"
+                            />
+                          </div>
 
-          {/* Image Picker */}
-          <div className="mt-4">
-            <label className="block mb-2">Upload Images</label>
-            <input
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={(e) => handleImageChange(index, e.target.files)}
-              className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"
-            />
+                          <div className="flex flex-col">
+                            <label className="font-medium">Color Name</label>
+                            <input
+                              type="text"
+                              {...register(
+                                `productAttributes.${index}.options.colors.${colorIndex}.color`
+                              )}
+                              placeholder="Color Name"
+                              defaultValue={String(colorObject.color) || ""}
+                              className="p-2 border border-gray-300 rounded-md"
+                            />
+                          </div>
 
-            {/* Image Previews */}
-            <div className="flex flex-wrap mt-2">
-              {imagePreviews[index]?.map((src, i) => (
-                <div key={i} className="mr-2 mb-2">
-                  <img
-                    src={src}
-                    alt={`Preview ${i}`}
-                    className="w-[100px] h-[100px] border border-gray-300 rounded-md object-cover"
-                  />
+                          <div className="flex flex-col">
+                            <label className="font-medium">Quantity</label>
+                            <input
+                              type="number"
+                              {...register(
+                                `productAttributes.${index}.options.colors.${colorIndex}.quantity`
+                              )}
+                              placeholder="Quantity"
+                              className="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"
+                            />
+                          </div>
+                          <div className="flex flex-col">
+                            <label className="font-medium">
+                              Discounted Price
+                            </label>
+                            <input
+                              type="number"
+                              {...register(
+                                `productAttributes.${index}.options.colors.${colorIndex}.discountedPrice`
+                              )}
+                              placeholder="Discounted Price"
+                              className="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            onClick={() => {
+                              const updatedColors = colors.filter(
+                                (_: any, i: number) => i !== colorIndex
+                              );
+                              setValue(
+                                `productAttributes.${index}.options.colors`,
+                                updatedColors
+                              );
+                            }}
+                          >
+                            <MdClose />
+                          </Button>
+
+                          {/* Image input for each color */}
+                          <div className="w-full">
+                            <label className="font-medium">
+                              Upload Images for {colorObject.color}
+                            </label>
+                            <input
+                              type="file"
+                              multiple
+                              accept="image/*"
+                              onChange={(e) =>
+                                handleImageChange(
+                                  index,
+                                  colorIndex,
+                                  e.target.files
+                                )
+                              }
+                              className="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"
+                            />
+                          </div>
+
+                          {/* Image Previews */}
+                          {imagePreviews[colorIndex]?.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {imagePreviews[colorIndex].map(
+                                (
+                                  preview: string | undefined,
+                                  idx: Key | null | undefined
+                                ) => (
+                                  <div
+                                    key={idx}
+                                    className="w-20 h-20 overflow-hidden border rounded-md"
+                                  >
+                                    <img
+                                      src={preview}
+                                      alt={`Image Preview ${idx}`}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </div>
+                                )
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        const newColorArray = [
+                          ...colors,
+                          {
+                            color: "",
+                            hex: "#000000",
+                            quantity: 0,
+                            discountedPrice: 0,
+                            images: [],
+                          },
+                        ];
+                        setValue(
+                          `productAttributes.${index}.options.colors`,
+                          newColorArray
+                        );
+                      }}
+                    >
+                      Add Color
+                    </Button>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      ))}
+              </AccordionContent>
+            </AccordionItem>
+          );
+        })}
+      </Accordion>
+
       <Button
         type="button"
-        onClick={() =>
-          append({
-            featured: false,
-            colorName: "",
-            hex: "#000000",
-            size: "",
-            quantity: 0,
-            discountedPrice: 0,
-            images: imagePreviews,
-          })
-        }
-        className="mt-2"
+        variant="secondary"
+        onClick={() => {
+          const lastAttribute = getLastAttributeValues();
+          append(lastAttribute); // Prepopulate with the last attribute's values (excluding images)
+        }}
       >
-        Add Attribute
+        <PlusIcon /> Add Attribute
       </Button>
     </div>
   );
